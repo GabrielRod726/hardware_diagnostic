@@ -30,7 +30,7 @@ Uma ferramenta de diagnóstico de hardware para Windows escrita em Rust, com sis
 ### Via Cargo
 ```bash
 cargo install hardware-diagnostic
-
+```
 ### 📄 Licença
 
 Este programa é software livre: você pode redistribuí-lo e/ou modificá-lo
