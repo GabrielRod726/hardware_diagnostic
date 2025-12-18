@@ -1,0 +1,35 @@
+[package]
+name = "hardware-diagnostic"
+version = "1.0.0"
+edition = "2021"
+authors = ["João Gabriel Rodrigues dos Santos <joao.santos.3@globalhitss.com.br"]
+description = "Ferramenta de diagnóstico de hardware para Windows com sistema de pontuação"
+license = "GPLv3"
+repository = "https://github.com/seuusuario/hardware-diagnostic"
+readme = "README.md"
+keywords = ["hardware", "diagnostic", "windows", "performance", "monitoring"]
+categories = ["command-line-utilities", "development-tools::profiling"]
+
+# Documentação
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = [
+    "--html-in-header", "docs/header.html",
+    "--generate-link-to-definition",
+    "--document-private-items"  # IMPORTANTE: Inclui funções privadas na doc
+]
+
+# Dependências
+[dependencies]
+sysinfo = "0.30"
+
+# Binários
+[[bin]]
+name = "hardware-diagnostic"
+path = "src/bin/main.rs"
+doc = false  # Não documenta o binário
+
+# Biblioteca
+[lib]
+name = "hardware_diagnostic"
+path = "src/lib.rs"
