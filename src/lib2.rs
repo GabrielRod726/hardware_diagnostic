@@ -22,4 +22,4 @@
 pub mod engine;
 
 // Re-exporta os tipos principais para fácil acesso
-pub use engine::{CpuInfo, RamInfo, DiskInfo, utils};
+pub use engine::{CpuInfo, RamInfo, DiskInfo, utils, write_report};

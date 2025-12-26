@@ -23,6 +23,7 @@ pub mod engine;
 
 use engine::utils;
 use engine::{calculate_performance_score, display_performance_score, PerformanceCategory};
+use std::{io, fs};
 
 fn main() {
     println!("{}", "=".repeat(60));
@@ -125,5 +126,7 @@ fn main() {
         println!("           📄 RELATÓRIO COMPLETO           ");
         println!("{}", "=".repeat(60));
         println!("{}", utils::generate_complete_report());
+        utils::write_report();
     }
 }
+

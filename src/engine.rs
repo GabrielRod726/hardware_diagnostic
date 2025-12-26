@@ -20,7 +20,7 @@
 //! como CPU, RAM e discos de armazenamento no Windows usando a crate `sysinfo`.
 
 use sysinfo::{System, Disks};
-
+use std::{io, fs};
 /// Representa as informações coletadas da CPU do sistema
 #[derive(Debug, Clone)]
 pub struct CpuInfo {
@@ -736,5 +736,150 @@ pub mod utils {
         report.push_str("\n");
         report.push_str(&display_performance_score(&calculate_performance_score()));
         report
+    }
+
+    ///Grava o relatorio gerado no arquivo complete_report.txt
+    pub fn write_report() -> io::Result<()> {
+        let data = generate_complete_report();
+        let file_path = "../../complete_report.txt";
+
+        // fs::write tenta criar o arquivo (ou sobrescreve se já existir)
+        fs::write(file_path, data)?;
+        
+        println!("Dados gravados com sucesso em {}", file_path);
+
+        Ok(())
+    }
+    
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+
+    // Mock do sistema para testes
+    struct MockSystem {
+        cpu_count: usize,
+        cpu_usage: f32,
+        total_ram: u64,
+        used_ram: u64,
+    }
+
+    #[test]
+    fn test_cpu_score_calculation() {
+        let cpu_info = CpuInfo {
+            number_cpus: 4,
+            cpu_usage: 25.0,
+            frequency: 3000,
+            name: "Test CPU".to_string(),
+            physical_cores: Some(2),
+        };
+        
+        let score = calculate_cpu_score(&cpu_info);
+        
+        // Verifica limites
+        assert!(score >= 0.0, "Pontuação não pode ser negativa");
+        assert!(score <= 10.0, "Pontuação não pode exceder 10.0");
+        
+        // Verifica cálculo específico
+        assert!(score > 5.0, "CPU com 4 cores deve ter pontuação > 5.0");
+    }
+
+    #[test]
+    fn test_ram_score_edge_cases() {
+        // Teste com RAM muito cheia
+        let ram_critical = RamInfo {
+            total_ram: 8 * 1024 * 1024 * 1024, // 8GB
+            used_ram: 7 * 1024 * 1024 * 1024,  // 7GB usado (87.5%)
+            free_ram: 1 * 1024 * 1024 * 1024,
+            total_swap: 2 * 1024 * 1024 * 1024,
+            used_swap: 1 * 1024 * 1024 * 1024,
+            ram_usage_percent: 87.5,
+            swap_usage_percent: 50.0,
+        };
+        
+        let score = calculate_ram_score(&ram_critical);
+        assert!(score < 5.0, "RAM com 87.5% uso deve ter pontuação baixa");
+        
+        // Teste com RAM vazia
+        let ram_empty = RamInfo {
+            total_ram: 16 * 1024 * 1024 * 1024,
+            used_ram: 1 * 1024 * 1024 * 1024,  // 6.25% usado
+            free_ram: 15 * 1024 * 1024 * 1024,
+            total_swap: 0,
+            used_swap: 0,
+            ram_usage_percent: 6.25,
+            swap_usage_percent: 0.0,
+        };
+        
+        let score = calculate_ram_score(&ram_empty);
+        assert!(score > 7.0, "RAM com pouco uso deve ter pontuação alta");
+    }
+
+    #[test]
+    fn test_determine_category() {
+        assert_eq!(determine_category(1.5), PerformanceCategory::Descarte);
+        assert_eq!(determine_category(3.5), PerformanceCategory::Manutencao);
+        assert_eq!(determine_category(5.5), PerformanceCategory::Precaução);
+        assert_eq!(determine_category(8.5), PerformanceCategory::BomEstado);
+        
+        // Teste de limites
+        assert_eq!(determine_category(2.9), PerformanceCategory::Descarte);
+        assert_eq!(determine_category(3.0), PerformanceCategory::Manutencao);
+        assert_eq!(determine_category(6.9), PerformanceCategory::Precaução);
+        assert_eq!(determine_category(7.0), PerformanceCategory::BomEstado);
+    }
+
+    #[test]
+    fn test_utils_functions() {
+        // Teste bytes_to_gb
+        assert_eq!(utils::bytes_to_gb(5_000_000_000), "5.00");
+        assert_eq!(utils::bytes_to_gb_f64(5_000_000_000), 5.0);
+        
+        // Teste progress_bar
+        let bar = utils::progress_bar(75.0, 10);
+        assert_eq!(bar.len(), 12); // [ + 10 chars + ]
+        assert!(bar.contains("██████████")); // 75% de 10 = 7.5 ≈ 8 caracteres
+    }
+
+    #[test]
+    fn test_recommendations_generation() {
+        let cpu_info = CpuInfo {
+            number_cpus: 1,
+            cpu_usage: 90.0,
+            frequency: 2000,
+            name: "Single Core".to_string(),
+            physical_cores: Some(1),
+        };
+        
+        let ram_info = RamInfo {
+            total_ram: 2 * 1024 * 1024 * 1024,
+            used_ram: 1_800_000_000,
+            free_ram: 200_000_000,
+            total_swap: 0,
+            used_swap: 0,
+            ram_usage_percent: 90.0,
+            swap_usage_percent: 0.0,
+        };
+        
+        let disks = vec![DiskInfo {
+            name: "C:".to_string(),
+            mount_point: "C:\\".to_string(),
+            total_space: 100_000_000_000,
+            available_space: 5_000_000_000, // Apenas 5GB livre
+            used_space: 95_000_000_000,
+            usage_percent: 95.0,
+            file_system: "NTFS".to_string(),
+            disk_type: "HDD".to_string(),
+        }];
+        
+        let recommendations = generate_recommendations(&cpu_info, &ram_info, &disks, 2.5);
+        
+        assert!(!recommendations.is_empty());
+        assert!(recommendations.iter().any(|r| r.contains("CPU")));
+        assert!(recommendations.iter().any(|r| r.contains("RAM")));
+        assert!(recommendations.iter().any(|r| r.contains("DISCO")));
     }
 }
